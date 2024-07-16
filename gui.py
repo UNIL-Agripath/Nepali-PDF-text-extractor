@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import filedialog, ttk
 from pdf_processor import PDFProcessor
 import fitz  # PyMuPDF
-from PIL import Image, ImageTk
+from PIL import Image, ImageTk, ImageDraw
 
 class OCRApplication:
     def __init__(self):
@@ -14,8 +14,10 @@ class OCRApplication:
         self.current_page = 0
         self.pdf_document = None
         self.translations = {}  # Store translations
+        self.bounding_boxes = []  # Store bounding boxes for each page
 
         self.setup_ui()
+
 
     def setup_ui(self):
         # Top frame for buttons
@@ -63,16 +65,32 @@ class OCRApplication:
         if self.pdf_path:
             self.pdf_document = fitz.open(self.pdf_path)
             self.current_page = 0
-            self.display_page()
             self.process_pdf(self.pdf_path)
+            self.display_page()
 
     def display_page(self):
         if self.pdf_document:
             page = self.pdf_document[self.current_page]
-            pix = page.get_pixmap(matrix=fitz.Matrix(1.5, 1.5))
+            zoom = 1.5  # Adjust this value to change the zoom level
+            mat = fitz.Matrix(zoom, zoom)
+            pix = page.get_pixmap(matrix=mat)
             img = Image.frombytes("RGB", [pix.width, pix.height], pix.samples)
+            
+            # Draw bounding boxes
+            draw = ImageDraw.Draw(img)
+            if self.current_page < len(self.bounding_boxes):
+                for box in self.bounding_boxes[self.current_page]:
+                    x, y, w, h, _ = box
+                    # Convert relative coordinates to absolute pixel coordinates
+                    x1 = int(x * pix.width)
+                    y1 = int(y * pix.height)
+                    x2 = int((x + w) * pix.width)
+                    y2 = int((y + h) * pix.height)
+                    draw.rectangle([x1, y1, x2, y2], outline="red", width=2)
+
             img.thumbnail((600, 700))
             photo = ImageTk.PhotoImage(img)
+            self.pdf_canvas.config(width=photo.width(), height=photo.height())
             self.pdf_canvas.delete("all")
             self.pdf_canvas.create_image(0, 0, anchor=tk.NW, image=photo)
             self.pdf_canvas.image = photo
@@ -88,7 +106,7 @@ class OCRApplication:
             self.display_page()
 
     def process_pdf(self, pdf_path):
-        extracted_text = PDFProcessor.extract_text_from_pdf(pdf_path)
+        extracted_text, self.bounding_boxes = PDFProcessor.extract_text_from_pdf(pdf_path)
         self.text_area.delete('1.0', tk.END)
         self.text_area.insert(tk.END, extracted_text)
 
