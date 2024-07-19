@@ -26,7 +26,6 @@ all_rules = {"post-rules": [["्ा", ""], ["(त्र|त्त)([^उभप]
                  "!": "१", "-": "(", "›": "द्र", ")": "०", "…": "‘", "Ü": "%"
              }}
 
-
 def preeti(words):
     output = ''
     for ind in range(len(words)):

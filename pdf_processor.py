@@ -16,12 +16,18 @@ class PDFProcessor:
             all_text = ""
             all_boxes = []
             
+            # Advanced Tesseract configuration
+            custom_config = r'--oem 3 --psm 6'
+            
             with tempfile.TemporaryDirectory() as path:
                 images = convert_from_path(pdf_path, output_folder=path, fmt=PDF_TO_IMAGE_FORMAT, use_pdftocairo=True)
                 
                 for i, image in enumerate(images):
                     width, height = image.size
-                    data = pytesseract.image_to_data(image, lang=language, output_type=pytesseract.Output.DICT)
+                    
+                    # Use advanced configuration in image_to_data
+                    data = pytesseract.image_to_data(image, lang=language, output_type=pytesseract.Output.DICT, config=custom_config)
+                    
                     text = " ".join(data['text'])
                     all_text += f"Page {i+1}:\n{text}\n\n"
                     
@@ -37,6 +43,7 @@ class PDFProcessor:
             return all_text, all_boxes
         except Exception as e:
             raise Exception(f"Error processing PDF: {str(e)}")
+
 
     @staticmethod
     def extract_text_with_pdfplumber(pdf_path):
