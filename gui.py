@@ -27,6 +27,18 @@ class OCRApplication:
         self.select_button = ttk.Button(top_frame, text="Select PDF", command=self.select_pdf)
         self.select_button.pack(side=tk.LEFT, padx=5)
 
+        self.load_button = ttk.Button(top_frame, text="Load Tessarcat", command=self.load_pdf)
+        self.load_button.pack(side=tk.LEFT, padx=5)
+        
+        self.load_button = ttk.Button(top_frame, text="Load pdfplumber", command=self.load_pdf_pdfplumber)
+        self.load_button.pack(side=tk.LEFT, padx=5)
+        
+        self.load_button = ttk.Button(top_frame, text="Load pymupdf", command=self.load_pdf_PyMuPDF)
+        self.load_button.pack(side=tk.LEFT, padx=5)
+        
+        self.load_button = ttk.Button(top_frame, text="Load pypdf2", command=self.load_pdf_pypdf2)
+        self.load_button.pack(side=tk.LEFT, padx=5)
+        
         self.prev_button = ttk.Button(top_frame, text="Previous Page", command=self.prev_page)
         self.prev_button.pack(side=tk.LEFT, padx=5)
 
@@ -64,10 +76,27 @@ class OCRApplication:
         self.pdf_path = filedialog.askopenfilename(filetypes=[("PDF files", "*.pdf")])
         if self.pdf_path:
             self.pdf_document = fitz.open(self.pdf_path)
-            self.current_page = 0
-            self.process_pdf(self.pdf_path)
-            self.display_page()
-
+            
+    def load_pdf(self):
+        self.current_page = 0
+        self.process_pdf(self.pdf_path)
+        self.display_page()
+    
+    def load_pdf_pdfplumber(self):
+        self.current_page = 0
+        self.process_pdf_pdfplumber(self.pdf_path)
+        self.display_page()
+    
+    def load_pdf_PyMuPDF(self):
+        self.current_page = 0
+        self.process_pdf_PyMuPDF(self.pdf_path)
+        self.display_page()
+        
+    def load_pdf_pypdf2(self):
+        self.current_page = 0
+        self.process_pdf_pypdf2(self.pdf_path)
+        self.display_page()
+        
     def display_page(self):
         if self.pdf_document:
             page = self.pdf_document[self.current_page]
@@ -110,6 +139,21 @@ class OCRApplication:
         self.text_area.delete('1.0', tk.END)
         self.text_area.insert(tk.END, extracted_text)
 
+    def process_pdf_pdfplumber(self, pdf_path):
+        extracted_text, self.bounding_boxes = PDFProcessor.extract_text_with_pdfplumber(pdf_path)
+        self.text_area.delete('1.0', tk.END)
+        self.text_area.insert(tk.END, extracted_text)
+    
+    def process_pdf_PyMuPDF(self, pdf_path):
+        extracted_text, self.bounding_boxes = PDFProcessor.extract_text_with_pymupdf(pdf_path)
+        self.text_area.delete('1.0', tk.END)
+        self.text_area.insert(tk.END, extracted_text)
+        
+    def process_pdf_pypdf2(self, pdf_path):
+        extracted_text, self.bounding_boxes = PDFProcessor.extract_text_with_pypdf2(pdf_path)
+        self.text_area.delete('1.0', tk.END)
+        self.text_area.insert(tk.END, extracted_text)
+        
     def translate_selection(self):
         try:
             selected_text = self.text_area.get(tk.SEL_FIRST, tk.SEL_LAST)
