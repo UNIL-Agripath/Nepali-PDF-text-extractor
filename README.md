@@ -1,6 +1,6 @@
 # Nepali PDF Text Extractor and Translator
 
-This application provides a graphical user interface (GUI) for extracting text from PDF files in Nepali language using various libraries and translating the extracted text to English.
+This application provides a graphical user interface (GUI) for extracting and comparing text from PDF files in Nepali using various libraries and translating the extracted text to English.
 
 ## Features
 
