@@ -11,11 +11,12 @@ from config import DEFAULT_LANGUAGE, DEFAULT_TARGET_LANGUAGE, PDF_TO_IMAGE_FORMA
 
 class PDFProcessor:
     @staticmethod
-    def extract_text_from_pdf(pdf_path, language=DEFAULT_LANGUAGE):
+    def extract_text_from_pdf(pdf_path, language=DEFAULT_LANGUAGE, boxes=False):
         try:
             all_text = ""
-            all_boxes = []
-            
+            if boxes:
+                all_boxes = []
+
             # Advanced Tesseract configuration
             custom_config = r'--oem 3 --psm 6'
             
@@ -30,17 +31,20 @@ class PDFProcessor:
                     
                     text = " ".join(data['text'])
                     all_text += f"Page {i+1}:\n{text}\n\n"
-                    
-                    boxes = []
-                    for j in range(len(data['text'])):
-                        if int(data['conf'][j]) > 60:
-                            (x, y, w, h) = (data['left'][j], data['top'][j], data['width'][j], data['height'][j])
-                            # Store coordinates as ratios of page dimensions
-                            boxes.append((x/width, y/height, w/width, h/height, data['text'][j]))
-                    
-                    all_boxes.append(boxes)
-            
-            return all_text, all_boxes
+
+                    if boxes:
+                        boxes = []
+                        for j in range(len(data['text'])):
+                            if int(data['conf'][j]) > 60:
+                                (x, y, w, h) = (data['left'][j], data['top'][j], data['width'][j], data['height'][j])
+                                # Store coordinates as ratios of page dimensions
+                                boxes.append((x/width, y/height, w/width, h/height, data['text'][j]))
+
+                        all_boxes.append(boxes)
+            if boxes:
+                return all_text, all_boxes
+            else:
+                return all_text
         except Exception as e:
             raise Exception(f"Error processing PDF: {str(e)}")
 
