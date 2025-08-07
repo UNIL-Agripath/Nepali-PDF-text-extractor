@@ -1,27 +1,26 @@
 import os
 import re
 import pandas as pd
-from docx import Document
+import fitz  # PyMuPDF
 
-# Folder where .docx files are stored
-INPUT_FOLDER = os.path.join(os.path.dirname(__file__), 'nepali_transcript')
+# Folder containing the PDF files
+INPUT_FOLDER = os.path.join(os.path.dirname(__file__), 'speeches')
 AGRIPATH_FOLDER = os.path.join(os.path.dirname(__file__), 'Agripath')
 os.makedirs(AGRIPATH_FOLDER, exist_ok=True)
 OUTPUT_FILE = os.path.join(AGRIPATH_FOLDER, 'extracted_speeches.xlsx')
 
-
-# Pattern for Nepali date: e.g., १८ फागुन २०८१
+# Nepali date pattern
 NEPALI_DATE_PATTERN = re.compile(r'\d{1,2} [\u0900-\u097F]+ २०[४-९]\d')
 
-# Pattern to identify speaker headers
-SPEAKER_PATTERN = re.compile(r'(माननीय\s*(श्री)?\s*[^\n\(：:–]{2,100}(?:\([^)]*\))?\s*[ः:：–]+)')
+# Pattern to identify speech blocks
+SPEECH_START_PATTERN = re.compile(r'(माननीय|सम्माननीय)\s*(श्री)?\s*[^\n]{2,100}?[：:–-]')
 
-
-
-def extract_text_from_docx(file_path):
-    doc = Document(file_path)
-    full_text = '\n'.join([para.text.strip() for para in doc.paragraphs if para.text.strip()])
-    return full_text
+def extract_text_from_pdf(file_path):
+    doc = fitz.open(file_path)
+    text = ""
+    for page in doc:
+        text += page.get_text()
+    return text
 
 
 def extract_date(text):
@@ -30,34 +29,55 @@ def extract_date(text):
 
 
 def extract_speeches(text):
-    speeches = []
     date = extract_date(text)
+    speeches = []
 
-    # Split based on speaker markers
-    parts = SPEAKER_PATTERN.split(text)
-    speakers = SPEAKER_PATTERN.findall(text)
+    # Split text by speech markers (माननीय or सम्माननीय)
+    speech_split_pattern = re.compile(r'(माननीय|सम्माननीय)[^\n]{0,200}[:：–-]')
+    matches = list(speech_split_pattern.finditer(text))
 
-    for i, speech in enumerate(parts[1:], start=0):
-        speaker = speakers[i].replace("：", ":").replace(":", "").strip()
-        speech_text = speech.strip()
-        if speaker and speech_text:
-            speeches.append({
-                'Date': date,
-                'Speaker': speaker,
-                'Speech': speech_text
-            })
+    for i, match in enumerate(matches):
+        start_idx = match.end()
+
+        if i + 1 < len(matches):
+            end_idx = matches[i + 1].start()
+        else:
+            end_idx = len(text)
+
+        speech_block = text[start_idx:end_idx].strip()
+
+        # Try to extract speaker name from within that block
+        name_match = re.search(r'(श्री|डा)\s*([^\n:：–-]{2,100})', text[match.start():match.end()])
+        if name_match:
+            speaker = f"{name_match.group(1)} {name_match.group(2).strip()}"
+        else:
+            speaker = "अज्ञात"
+
+        # Trim at 'धन्यवाद।' if present
+        thanks_match = re.search(r'धन्यवाद।', speech_block)
+        if thanks_match:
+            speech_block = speech_block[:thanks_match.end()]
+
+        speeches.append({
+            'Date': date,
+            'Speaker': speaker,
+            'Speech': speech_block
+        })
+
     return speeches
+
 
 
 def main():
     all_data = []
 
     for filename in os.listdir(INPUT_FOLDER):
-        if filename.endswith('.docx'):
+        if filename.endswith('.pdf'):
             file_path = os.path.join(INPUT_FOLDER, filename)
             print(f"📄 Processing: {filename}")
             try:
-                text = extract_text_from_docx(file_path)
+                text = extract_text_from_pdf(file_path)
+                print("🔍 Sample text:", text[:300])
                 speech_data = extract_speeches(text)
                 all_data.extend(speech_data)
             except Exception as e:
